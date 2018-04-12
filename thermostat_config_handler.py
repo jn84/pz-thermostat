@@ -20,7 +20,6 @@ class ThermostatConfigurationHandler:
     MQTT_TOPIC_REPORT_TEMP_TARGET = None  # type: float
     MQTT_TOPIC_SET_TEMP_TARGET = None  # type: float
 
-    WIRE1_BUS_PIN = None
     TEMPERATURE_SENSOR_ID = None  # type: str
     TEMPERATURE_UNIT = None  # type: float
     TEMPERATURE_RANGE = None  # type: float
@@ -156,10 +155,6 @@ class ThermostatConfigurationHandler:
             bool_parse(config['GPIOConfig']['heater_control_output_active'],
                        'heater_control_output_active',
                        False)
-        self.WIRE1_BUS_PIN = self.\
-            int_parse(config['GPIOConfig']['wire1_bus_pin'],
-                      'wire1_bus_pin',
-                      False)
 
         if self.MQTT_CLIENT_ID == '' or self.MQTT_CLIENT_ID is None:
             self.generate_client_id()

@@ -1,7 +1,8 @@
 import argparse
-import generic_mqtt_switch_config_handler
-import switch_handler
 import logging
+import heater_handler
+import thermometer_handler
+import thermostat_config_handler
 import string
 import sys
 import traceback
@@ -18,11 +19,14 @@ VERSION = '0.1a'
 
 LOG_LEVEL = logging.DEBUG
 
+client = None
+logger = None
+
 _is_mqtt_connected = False
 
-client = None
-
-logger = None
+_target_temperature = None
+_target_temperature_upper = None
+_target_temperature_lower = None
 
 
 def get_timed_rotating_logger(switch_name, log_level):
@@ -79,7 +83,7 @@ if not path.isfile(args.config_file) or not access(args.config_file, R_OK):
 # Parse the config file
 
 try:
-    config = generic_mqtt_switch_config_handler.GenericSwitchConfigurationHandler(args.config_file)
+    config = thermostat_config_handler.ThermostatConfigurationHandler(args.config_file)
 except ConfigError as e:
     print(str(e))
     sys.exit('Error parsing the config file')
@@ -89,15 +93,17 @@ except TypeError as e:
              'are in the correct format.')
 
 
-logger = get_timed_rotating_logger(config.SWITCH_NAME,
-                                   logging.WARNING)
+logger = get_timed_rotating_logger(config.THERMOSTAT_NAME,
+                                   LOG_LEVEL)
 
 logger.info('Configuration file successfully loaded')
 logger.info('Initializing switch handler...')
 
 # Initialize door
-switch = switch_handler.GenericSwitchHandler(config.SWITCH_CONTROL_OUTPUT_PIN,
-                                             config.SWITCH_CONTROL_OUTPUT_ACTIVE)
+heater = heater_handler.HeaterHandler(config.HEATER_CONTROL_OUTPUT_PIN,
+                                      config.HEATER_CONTROL_OUTPUT_ACTIVE)
+
+thermo = thermometer_handler.ThermometerHandler(config.TEMPERATURE_SENSOR_ID)
 
 
 logger.info('Switch handler successfully initialized')
@@ -107,10 +113,20 @@ logger.info('Defining definitions...')
 def on_connect(client_local, userdata, flags, rc):
     global _is_mqtt_connected
     logger.info('Setting up MQTT subscriptions and publishing initial state data')
-    client_local.subscribe(config.MQTT_TOPIC_SET_SWITCH_STATE)
-    client_local.publish(config.MQTT_TOPIC_REPORT_SWITCH_STATE, switch.state_out(), qos=1, retain=True)
+    client_local.subscribe(config.MQTT_TOPIC_SET_TEMP_TARGET)
+    client_local.publish(config.MQTT_TOPIC_REPORT_HEATER_STATE,
+                         heater.state_out(),
+                         qos=1,
+                         retain=True)
+    client_local.publish(config.MQTT_TOPIC_REPORT_TEMP,
+                         thermo.get_temperature(config.TEMPERATURE_UNIT),
+                         qos=1,
+                         retain=True)
+    client_local.publish(config.MQTT_TOPIC_REPORT_TEMP_TARGET,
+                         _target_temperature,
+                         qos=1,
+                         retain=True)
     logger.info('MQTT successfully connected on port:' + str(config.get_port()))
-    logger.info('MQTT Published initial state:' + str(switch.state_out()))
     _is_mqtt_connected = True
 
 

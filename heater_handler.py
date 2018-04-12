@@ -1,7 +1,7 @@
 import RPi.GPIO as GPIO
 
 
-class GenericSwitchHandler:
+class HeaterHandler:
     """MQTT Heater object"""  # __doc__ / docstring
 
     VERSION = '0.1a'
