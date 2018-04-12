@@ -97,18 +97,19 @@ logger = get_timed_rotating_logger(config.THERMOSTAT_NAME,
                                    LOG_LEVEL)
 
 logger.info('Configuration file successfully loaded')
-logger.info('Initializing switch handler...')
+logger.info('Initializing handlers...')
 
 # Initialize door
 heater = heater_handler.HeaterHandler(config.HEATER_CONTROL_OUTPUT_PIN,
                                       config.HEATER_CONTROL_OUTPUT_ACTIVE)
 
+logger.info('Heater handler successfully initialized')
+
 thermo = thermometer_handler.ThermometerHandler(config.TEMPERATURE_SENSOR_ID)
 
+logger.info('Thermometer handler successfully initialized')
 
-logger.info('Switch handler successfully initialized')
 logger.info('Defining definitions...')
-
 
 def on_connect(client_local, userdata, flags, rc):
     global _is_mqtt_connected
@@ -136,22 +137,17 @@ def on_disconnect(client_local, userdata, rc):
 
 
 def on_message(client_local, userdata, msg):
-    # Should only get messages from subscribed topic
-    # Should convert state message to bool
-    # Payload strings are byte arrays. Need to decode them.
-    state = parse_bool_payload(msg.payload.decode())
-    logger.info('Set switch state message received. Sending command to switch handler.')
-    switch.set_state(state)
+    # Handle target temperature changes here
 
 
-def on_switch_state_change(state):
+def on_heater_state_change(state):
     global client
     if client is not None and _is_mqtt_connected:
-        client.publish(config.MQTT_TOPIC_REPORT_SWITCH_STATE, state, qos=1, retain=True)
-        logger.info('Reporting switch state to MQTT. Current state: ' + str(state))
+        client.publish(config.MQTT_TOPIC_REPORT_HEATER_STATE, state, qos=1, retain=True)
+        logger.info('Reporting heater state to MQTT. Current state: ' + str(state))
 
 
-def on_switch_handler_message(message):
+def on_log_message(message):
     logger.debug(message)
 
 
@@ -161,8 +157,9 @@ def parse_bool_payload(state_payload):
     return state == 'true'
 
 
-switch.on_state_change = on_switch_state_change
-switch.on_log_message = on_switch_handler_message
+heater.on_state_change = on_heater_state_change
+heater.on_log_message = on_log_message
+thermo.on_log_message = on_log_message
 
 logger.info('Definitions successfully defined')
 logger.info('Configuring MQTT client...')
@@ -190,10 +187,12 @@ logger.info('Creating MQTT connection to host: ' + config.MQTT_HOST)
 client.connect(config.MQTT_HOST, port=config.get_port(), keepalive=60)
 
 try:
+    # Don't loop forever. We need to take heater readings constantly.
+    # loop_forever blocks. Can't have any of that nonsense
     client.loop_forever()
 except KeyboardInterrupt:
     client.loop_stop()
-    logger.info('Switch controller stopped by keyboard input. Cleaning up and exiting...')
+    logger.info('Thermostat controller stopped by keyboard input. Cleaning up and exiting...')
 except:  # Phooey at your PEP 8 rules. I need to log everything.
     tb = traceback.format_exc()
     logger.error(tb)
