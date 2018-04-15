@@ -1,8 +1,10 @@
 import argparse
 import logging
 import heater_handler
+import math
 import thermometer_handler
 import thermostat_config_handler
+import time
 import string
 import sys
 import traceback
@@ -29,13 +31,13 @@ _target_temperature_upper = None
 _target_temperature_lower = None
 
 
-def get_timed_rotating_logger(switch_name, log_level):
-    log_file = 'switch.log'
+def get_timed_rotating_logger(thermo_name, log_level):
+    log_file = 'thermostat.log'
 
     # Remove punctuation and directorize Instance Name
     translator = str.maketrans('', '', string.punctuation)
 
-    log_dir = switch_name.translate(translator)
+    log_dir = thermo_name.translate(translator)
     log_dir = log_dir.replace(' ', '_')
     log_dir += '/'
 
@@ -43,7 +45,7 @@ def get_timed_rotating_logger(switch_name, log_level):
     if not path.exists(log_dir):
         mkdir(log_dir)
 
-    log_obj = logging.getLogger(switch_name)
+    log_obj = logging.getLogger(thermo_name)
     log_obj.setLevel(log_level)
 
     formatter = logging.Formatter(fmt='%(asctime)s %(levelname)-8s %(message)s',
@@ -61,9 +63,9 @@ def get_timed_rotating_logger(switch_name, log_level):
 
 
 # Get the config file name
-parser = argparse.ArgumentParser(description='Control a switch.',
-                                 epilog='Not really a switch. Really a relay.',
-                                 prog='switch_controller.py')
+parser = argparse.ArgumentParser(description='Control temperature',
+                                 epilog='We like it hot, but not too hot',
+                                 prog='thermostat_controller.py')
 parser.add_argument('-v', '--version', action='version', version='%(prog)s ' + VERSION)
 parser.add_argument('-c', '--config', type=str, default='example.config', dest='config_file',
                     help='File name of the config file used to launch the daemon.'
@@ -111,6 +113,7 @@ logger.info('Thermometer handler successfully initialized')
 
 logger.info('Defining definitions...')
 
+
 def on_connect(client_local, userdata, flags, rc):
     global _is_mqtt_connected
     logger.info('Setting up MQTT subscriptions and publishing initial state data')
@@ -137,7 +140,11 @@ def on_disconnect(client_local, userdata, rc):
 
 
 def on_message(client_local, userdata, msg):
-    # Handle target temperature changes here
+    global _target_temperature
+    if msg.topic == config.MQTT_TOPIC_SET_TEMP_TARGET:
+        set_target_temperature(float(msg.payload))
+    else:
+        logger.error('Received message from non subscribed topic. This should never happen...: ' + str(msg.topic))
 
 
 def on_heater_state_change(state):
@@ -157,9 +164,18 @@ def parse_bool_payload(state_payload):
     return state == 'true'
 
 
+def set_target_temperature(temp):
+    global _target_temperature, _target_temperature_lower, _target_temperature_upper
+    _target_temperature = temp
+    _target_temperature_lower = temp - config.TEMPERATURE_RANGE
+    _target_temperature_upper = temp + config.TEMPERATURE_RANGE
+
+
 heater.on_state_change = on_heater_state_change
 heater.on_log_message = on_log_message
 thermo.on_log_message = on_log_message
+
+set_target_temperature(config.TEMPERATURE_TARGET_DEFAULT)
 
 logger.info('Definitions successfully defined')
 logger.info('Configuring MQTT client...')
@@ -187,9 +203,32 @@ logger.info('Creating MQTT connection to host: ' + config.MQTT_HOST)
 client.connect(config.MQTT_HOST, port=config.get_port(), keepalive=60)
 
 try:
-    # Don't loop forever. We need to take heater readings constantly.
-    # loop_forever blocks. Can't have any of that nonsense
-    client.loop_forever()
+    client.loop_start()
+    current_temp = 0.0
+    last_temp = 0.0
+
+    while True:
+        # Get current temperature
+        current_temp = thermo.get_temperature(config.TEMPERATURE_UNIT)
+
+        # Only publish if changed more than a tenth of a degree
+        # No need to flood the mqtt broker
+        if not math.isclose(current_temp, last_temp, abs_tol=0.1):
+            client.publish(config.MQTT_TOPIC_REPORT_TEMP, current_temp, qos=1, retain=True)
+            last_temp = current_temp
+            logger.info('Got temp: ' + str(current_temp))
+            logger.info('Target  : ' + str(_target_temperature))
+
+        if heater.state_out() is False and current_temp < _target_temperature_lower:
+            logger.info("Temperature below threshold. Powering heater on.")
+            heater.set_state(True)
+
+        elif heater.state_out() is True and current_temp > _target_temperature_upper:
+            logger.info("Temperature above threshold. Powering heater off.")
+            heater.set_state(False)
+
+        time.sleep(0.5)
+
 except KeyboardInterrupt:
     client.loop_stop()
     logger.info('Thermostat controller stopped by keyboard input. Cleaning up and exiting...')
@@ -198,5 +237,5 @@ except:  # Phooey at your PEP 8 rules. I need to log everything.
     logger.error(tb)
     logger.error('Unhandled exception. Quitting...')
 finally:
-    switch.cleanup()
+    heater.cleanup()
 

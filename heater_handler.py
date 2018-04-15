@@ -6,7 +6,7 @@ class HeaterHandler:
 
     VERSION = '0.1a'
 
-    # BCM pin of switch control relay
+    # BCM pin of heater power control relay
     _gpio_heater_control_pin = -1
 
     # [ON] state of the relay IO

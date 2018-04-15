@@ -1,3 +1,5 @@
+import math
+
 from w1thermsensor import W1ThermSensor
 
 
@@ -34,11 +36,11 @@ class ThermometerHandler:
 
         # Got valid reading. Give the info back
         if unit.lower() == 'f':
-            return c_to_f(temp_reading)
+            return round(c_to_f(temp_reading), 2)
         if unit.lower() == 'c':
-            return temp_reading
+            return round(temp_reading, 2)
         if unit.lower() == 'k':
-            return c_to_k(temp_reading)
+            return round(c_to_k(temp_reading), 2)
         # Bad unit. Don't know what to do with it.
         raise ValueError('Unknown temperature unit: ' + str(unit) + '\n         Check your config file.')
 
