@@ -1,0 +1,14 @@
+[Unit]
+Description=Thermostat Service 0
+After=network.target
+
+[Service]
+ExecStart=/usr/bin/python3.5 -u thermostat_controller.py -c example.config
+WorkingDirectory=/home/pi/pz-thermostat
+StandardOutput=inherit
+StandardInput=inherit
+Restart=always
+User=pi
+
+[Install]
+WantedBy=multi-user.target
