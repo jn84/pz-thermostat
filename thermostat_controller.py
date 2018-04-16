@@ -19,7 +19,7 @@ from os import R_OK
 
 VERSION = '0.1a'
 
-LOG_LEVEL = logging.DEBUG
+LOG_LEVEL = logging.INFO
 
 client = None
 logger = None
@@ -216,8 +216,8 @@ try:
         if not math.isclose(current_temp, last_temp, abs_tol=0.1):
             client.publish(config.MQTT_TOPIC_REPORT_TEMP, current_temp, qos=1, retain=True)
             last_temp = current_temp
-            logger.info('Got temp: ' + str(current_temp))
-            logger.info('Target  : ' + str(_target_temperature))
+            logger.debug('Got temp: ' + str(current_temp))
+            logger.debug('Target  : ' + str(_target_temperature))
 
         if heater.state_out() is False and current_temp < _target_temperature_lower:
             logger.info("Temperature below threshold. Powering heater on.")
