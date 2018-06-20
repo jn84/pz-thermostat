@@ -28,9 +28,11 @@ class HeaterHandler:
         self._current_state = not self._gpio_heater_control_active
 
         GPIO.setmode(GPIO.BCM)
+        self.log("GPIO set to BCM")
 
         # Set initial state to OFF (not active)
         GPIO.setup(self._gpio_heater_control_pin, GPIO.OUT, initial=int(self._current_state))
+        self.log("GPIO Initialized")
 
     # Callers will simply say ON, OFF; HIGH, LOW; 1, 0; True, False
     # They need no knowledge of inverted outputs

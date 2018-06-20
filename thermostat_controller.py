@@ -17,9 +17,9 @@ from os import path
 from os import mkdir
 from os import R_OK
 
-VERSION = '0.1a'
+VERSION = '0.2a'
 
-LOG_LEVEL = logging.INFO
+LOG_LEVEL = logging.DEBUG
 
 client = None
 logger = None
@@ -116,22 +116,25 @@ logger.info('Defining definitions...')
 
 def on_connect(client_local, userdata, flags, rc):
     global _is_mqtt_connected
-    logger.info('Setting up MQTT subscriptions and publishing initial state data')
-    client_local.subscribe(config.MQTT_TOPIC_SET_TEMP_TARGET)
-    client_local.publish(config.MQTT_TOPIC_REPORT_HEATER_STATE,
-                         heater.state_out(),
-                         qos=1,
-                         retain=True)
-    client_local.publish(config.MQTT_TOPIC_REPORT_TEMP,
-                         thermo.get_temperature(config.TEMPERATURE_UNIT),
-                         qos=1,
-                         retain=True)
-    client_local.publish(config.MQTT_TOPIC_REPORT_TEMP_TARGET,
-                         _target_temperature,
-                         qos=1,
-                         retain=True)
-    logger.info('MQTT successfully connected on port:' + str(config.get_port()))
-    _is_mqtt_connected = True
+    if rc == 0:  # Successful connection
+        logger.info('Setting up MQTT subscriptions and publishing initial state data')
+        client_local.subscribe(config.MQTT_TOPIC_SET_TEMP_TARGET)
+        client_local.publish(config.MQTT_TOPIC_REPORT_HEATER_STATE,
+                             heater.state_out(),
+                             qos=1,
+                             retain=True)
+        client_local.publish(config.MQTT_TOPIC_REPORT_TEMP,
+                             thermo.get_temperature(config.TEMPERATURE_UNIT),
+                             qos=1,
+                             retain=True)
+        client_local.publish(config.MQTT_TOPIC_REPORT_TEMP_TARGET,
+                             _target_temperature,
+                             qos=1,
+                             retain=True)
+        logger.info('MQTT successfully connected on port:' + str(config.get_port()))
+        _is_mqtt_connected = True
+    else:
+        _is_mqtt_connected = False
 
 
 def on_disconnect(client_local, userdata, rc):
@@ -205,12 +208,13 @@ else:
 logger.info('MQTT successfully configured')
 logger.info('Creating MQTT connection to host: ' + config.MQTT_HOST)
 
+client.connect_async(config.MQTT_HOST, port=config.get_port(), keepalive=60)
+
+current_temp = 0.0
+last_temp = 0.0
 
 try:
-    client.connect(config.MQTT_HOST, port=config.get_port(), keepalive=60)
     client.loop_start()
-    current_temp = 0.0
-    last_temp = 0.0
 
     while True:
         # Get current temperature
@@ -237,7 +241,7 @@ try:
 except KeyboardInterrupt:
     client.loop_stop()
     logger.info('Thermostat controller stopped by keyboard input. Cleaning up and exiting...')
-except:  # Phooey at your PEP 8 rules. I need to log everything.
+except:  # Phooey at your PEP 8 rules. I have no idea what exceptions I might run into
     tb = traceback.format_exc()
     logger.error(tb)
     logger.error('Unhandled exception. Quitting...')
