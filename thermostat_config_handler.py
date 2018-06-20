@@ -4,6 +4,10 @@ from random import choice
 
 
 class ThermostatConfigurationHandler:
+    
+    config = None
+    config_file = None
+    
     THERMOSTAT_NAME = None  # type: str
 
     MQTT_HOST = None  # type: str
@@ -74,85 +78,92 @@ class ThermostatConfigurationHandler:
             return self.MQTT_PORT_SSL
         return self.MQTT_PORT
 
+    def save_target_temp(self, new_value):
+        self.config.set('Temperature', 'temperature_target_default', str(new_value))
+        with open(self.config_file, 'w') as config_writer:
+            self.config.write(config_writer)
+
     def __init__(self, config_file):
 
-        config = configparser.ConfigParser()
-        config.read(config_file)
+        self.config_file = config_file
+
+        self.config = configparser.ConfigParser()
+        self.config.read(self.config_file)
 
         self.THERMOSTAT_NAME = self.\
-            str_parse(config['General']['thermostat_name'],
+            str_parse(self.config['General']['thermostat_name'],
                       'thermostat_name',
                       False)
         self.TEMPERATURE_SENSOR_ID = self.\
-            str_parse(config['Temperature']['temperature_sensor_id'],
+            str_parse(self.config['Temperature']['temperature_sensor_id'],
                       'temperature_sensor_id',
                       False)
         self.TEMPERATURE_UNIT = self.\
-            str_parse(config['Temperature']['temperature_unit'],
+            str_parse(self.config['Temperature']['temperature_unit'],
                       'temperature_unit',
                       False)
         self.TEMPERATURE_RANGE = self.\
-            float_parse(config['Temperature']['temperature_range'],
+            float_parse(self.config['Temperature']['temperature_range'],
                         'temperature_range',
                         False)
         self.TEMPERATURE_TARGET_DEFAULT = self.\
-            float_parse(config['Temperature']['temperature_target_default'],
+            float_parse(self.config['Temperature']['temperature_target_default'],
                         'temperature_target_default',
                         False)
         self.MQTT_HOST = self.\
-            str_parse(config['MQTTBrokerConfig']['mqtt_host'],
+            str_parse(self.config['MQTTBrokerConfig']['mqtt_host'],
                       'mqtt_host',
                       False)
         self.MQTT_PORT = self.\
-            int_parse(config['MQTTBrokerConfig']['mqtt_port'],
+            int_parse(self.config['MQTTBrokerConfig']['mqtt_port'],
                       'mqtt_port',
                       False)
         self.MQTT_CLIENT_ID = self.\
-            str_parse(config['MQTTBrokerConfig']['mqtt_client_id'],
+            str_parse(self.config['MQTTBrokerConfig']['mqtt_client_id'],
                       'mqtt_client_id',
                       True)
         self.MQTT_USE_AUTHENTICATION = self.\
-            bool_parse(config['MQTTBrokerConfig']['mqtt_use_authentication'],
+            bool_parse(self.config['MQTTBrokerConfig']['mqtt_use_authentication'],
                        'mqtt_use_authentication',
                        False)
         self.MQTT_USERNAME = self.\
-            str_parse(config['MQTTBrokerConfig']['mqtt_username'],
+            str_parse(self.config['MQTTBrokerConfig']['mqtt_username'],
                       'mqtt_username',
                       not self.MQTT_USE_AUTHENTICATION)
         self.MQTT_PASSWORD = self.\
-            str_parse(config['MQTTBrokerConfig']['mqtt_password'],
+            str_parse(self.config['MQTTBrokerConfig']['mqtt_password'],
                       'mqtt_password',
                       not self.MQTT_USE_AUTHENTICATION)
         self.MQTT_USE_SSL = self.\
-            bool_parse(config['MQTTBrokerConfig']['mqtt_use_ssl'],
+            bool_parse(self.config['MQTTBrokerConfig']['mqtt_use_ssl'],
                        'mqtt_use_ssl',
                        False)
         self.MQTT_PORT_SSL = self.\
-            int_parse(config['MQTTBrokerConfig']['mqtt_port_ssl'],
+            int_parse(self.config['MQTTBrokerConfig']['mqtt_port_ssl'],
                       'mqtt_port_ssl',
                       not self.MQTT_USE_SSL)
         self.MQTT_TOPIC_REPORT_HEATER_STATE = self.\
-            str_parse(config['MQTTTopicConfig']['mqtt_topic_report_heater_state'],
+            str_parse(self.config['MQTTTopicConfig']['mqtt_topic_report_heater_state'],
                       'mqtt_topic_report_heater_state',
                       False)
         self.MQTT_TOPIC_REPORT_TEMP = self.\
-            str_parse(config['MQTTTopicConfig']['mqtt_topic_report_temp'],
+            str_parse(self.config['MQTTTopicConfig']['mqtt_topic_report_temp'],
                       'mqtt_topic_report_temp',
                       False)
         self.MQTT_TOPIC_REPORT_TEMP_TARGET = self.\
-            str_parse(config['MQTTTopicConfig']['mqtt_topic_report_temp_target'],
+            str_parse(self.config['MQTTTopicConfig']['mqtt_topic_report_temp_target'],
                       'mqtt_topic_report_temp_target',
                       False)
         self.MQTT_TOPIC_SET_TEMP_TARGET = self.\
-            str_parse(config['MQTTTopicConfig']['mqtt_topic_set_temp_target'],
+            str_parse(self.config['MQTTTopicConfig']['mqtt_topic_set_temp_target'],
                       'mqtt_topic_set_temp_target',
                       False)
         self.HEATER_CONTROL_OUTPUT_PIN = self.\
-            int_parse(config['GPIOConfig']['heater_control_output_pin'],
+            int_parse(self.config['GPIOConfig']['heater_control_output_pin'],
                       'heater_control_output_pin',
                       False)
         self.HEATER_CONTROL_OUTPUT_ACTIVE = self.\
-            bool_parse(config['GPIOConfig']['heater_control_output_active'],
+            bool_parse(self.config['GPIOConfig']['heater_control_output_active'],
                        'heater_control_output_active',
                        False)
 

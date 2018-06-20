@@ -143,6 +143,11 @@ def on_message(client_local, userdata, msg):
     global _target_temperature
     if msg.topic == config.MQTT_TOPIC_SET_TEMP_TARGET:
         set_target_temperature(float(msg.payload))
+        client_local.publish(config.MQTT_TOPIC_REPORT_TEMP_TARGET,
+                             _target_temperature,
+                             qos=1,
+                             retain=True)
+        config.save_target_temp(str(_target_temperature))
     else:
         logger.error('Received message from non subscribed topic. This should never happen...: ' + str(msg.topic))
 
@@ -165,7 +170,7 @@ def parse_bool_payload(state_payload):
 
 
 def set_target_temperature(temp):
-    global _target_temperature, _target_temperature_lower, _target_temperature_upper
+    global _target_temperature, _target_temperature_lower, _target_temperature_upper, client
     _target_temperature = temp
     _target_temperature_lower = temp - config.TEMPERATURE_RANGE
     _target_temperature_upper = temp + config.TEMPERATURE_RANGE
@@ -200,9 +205,9 @@ else:
 logger.info('MQTT successfully configured')
 logger.info('Creating MQTT connection to host: ' + config.MQTT_HOST)
 
-client.connect(config.MQTT_HOST, port=config.get_port(), keepalive=60)
 
 try:
+    client.connect(config.MQTT_HOST, port=config.get_port(), keepalive=60)
     client.loop_start()
     current_temp = 0.0
     last_temp = 0.0

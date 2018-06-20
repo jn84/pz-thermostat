@@ -55,7 +55,7 @@ class HeaterHandler:
         if self.on_state_change is not None:
             self.on_state_change(self.state_out())
 
-    # Callers are ignorant to inverted outputs
+    # Callers are ignorant of inverted outputs
     # Make the conversion behind the scenes
     # All incoming states should pass through this method
     def state_in(self, state):
