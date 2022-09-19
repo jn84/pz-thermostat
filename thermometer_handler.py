@@ -1,19 +1,17 @@
 import math
 
-from w1thermsensor import W1ThermSensor
-
+import board
+import adafruit_dht
 
 def c_to_f(temp):
     return temp * 1.8 + 32
-
 
 def c_to_k(temp):
     return temp + 273.15
 
 
 class ThermometerHandler:
-    _sensor_id = None
-    _sensor = None
+    _dht_device1 = None
 
     on_log_message = None
 
