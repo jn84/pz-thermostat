@@ -1,8 +1,5 @@
 import configparser
 
-from random import choice
-
-
 class ThermostatConfigurationHandler:
     
     config = None
