@@ -19,9 +19,10 @@ class ThermostatConfigurationHandler:
     MQTT_TOPIC_REPORT_HEATER_STATE = None  # type: str
     MQTT_TOPIC_REPORT_TEMP = None  # type: float
     MQTT_TOPIC_REPORT_TEMP_TARGET = None  # type: float
+    MQTT_TOPIC_REPORT_HUMIDITY = None #type: int
     MQTT_TOPIC_SET_TEMP_TARGET = None  # type: float
 
-    TEMPERATURE_SENSOR_ID = None  # type: str
+    TEMPERATURE_SENSOR_PIN = None  # type: str
     TEMPERATURE_UNIT = None  # type: float
     TEMPERATURE_RANGE = None  # type: float
     TEMPERATURE_TARGET_DEFAULT = None  # type: float
@@ -91,9 +92,9 @@ class ThermostatConfigurationHandler:
             str_parse(self.config['General']['thermostat_name'],
                       'thermostat_name',
                       False)
-        self.TEMPERATURE_SENSOR_ID = self.\
-            str_parse(self.config['Temperature']['temperature_sensor_id'],
-                      'temperature_sensor_id',
+        self.TEMPERATURE_SENSOR_PIN = self.\
+            int_parse(self.config['Temperature']['temperature_sensor_pin'],
+                      'temperature_sensor_pin',
                       False)
         self.TEMPERATURE_UNIT = self.\
             str_parse(self.config['Temperature']['temperature_unit'],
@@ -146,6 +147,10 @@ class ThermostatConfigurationHandler:
         self.MQTT_TOPIC_REPORT_TEMP = self.\
             str_parse(self.config['MQTTTopicConfig']['mqtt_topic_report_temp'],
                       'mqtt_topic_report_temp',
+                      False)
+        self.MQTT_TOPIC_REPORT_HUMIDITY = self.\
+            str_parse(self.config['MQTTTopicConfig']['mqtt_topic_report_humidity'],
+                      'mqtt_topic_report_humidity',
                       False)
         self.MQTT_TOPIC_REPORT_TEMP_TARGET = self.\
             str_parse(self.config['MQTTTopicConfig']['mqtt_topic_report_temp_target'],

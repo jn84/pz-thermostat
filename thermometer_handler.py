@@ -1,6 +1,3 @@
-import math
-
-import board
 import adafruit_dht
 import time
 
@@ -22,8 +19,20 @@ class ThermometerHandler:
         self._sensor = adafruit_dht.DHT22(self._sensor_pin)
 
     def get_humidity(self):
-        # try... handle errors TBC
-        return self._sensor.humidity
+        humidity_reading = None
+        while True:
+            try:
+                humidity_reading = self._sensor.humidity
+            except RuntimeError as error:
+                time.sleep(1.0)
+                continue
+            except Exception as error:
+                # Unknown error?
+                self._sensor.exit()
+                raise error
+            if 5 <= humidity_reading <= 100:
+                break
+        return humidity_reading
 
     def get_temperature(self, unit='f'):
         temp_reading = None

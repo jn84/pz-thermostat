@@ -3,7 +3,7 @@ Description=Thermostat Service 0
 After=network.target
 
 [Service]
-ExecStart=/usr/bin/python3.5 -u thermostat_controller.py -c example.config
+ExecStart=/usr/bin/python3.9 -u thermostat_controller.py -c example.config
 WorkingDirectory=/home/pi/pz-thermostat
 StandardOutput=inherit
 StandardInput=inherit

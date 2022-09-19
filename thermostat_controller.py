@@ -127,6 +127,10 @@ def on_connect(client_local, userdata, flags, rc):
                              thermo.get_temperature(config.TEMPERATURE_UNIT),
                              qos=1,
                              retain=True)
+        client_local.publish(config.MQTT_TOPIC_REPORT_HUMIDITY,
+                             thermo.get_humidity(),
+                             qos=1,
+                             retain=True)
         client_local.publish(config.MQTT_TOPIC_REPORT_TEMP_TARGET,
                              _target_temperature,
                              qos=1,
@@ -219,14 +223,17 @@ try:
     while True:
         # Get current temperature
         current_temp = thermo.get_temperature(config.TEMPERATURE_UNIT)
+        current_humidity = thermo.get_humidity()
 
         # Only publish if changed more than a tenth of a degree
         # No need to flood the mqtt broker
-        if not math.isclose(current_temp, last_temp, abs_tol=0.1):
+        if not math.isclose(current_temp, last_temp, abs_tol=0.2):
             client.publish(config.MQTT_TOPIC_REPORT_TEMP, current_temp, qos=1, retain=True)
+            client.publish(config.MQTT_TOPIC_REPORT_HUMIDITY, current_humidity, qos=1, retain=True)
             last_temp = current_temp
-            logger.debug('Got temp: ' + str(current_temp))
-            logger.debug('Target  : ' + str(_target_temperature))
+            logger.debug('Got temp    : ' + str(current_temp))
+            logger.debug('Got humidity: ' + str(current_humidity) + '%')
+            logger.debug('Target      : ' + str(_target_temperature))
 
         if heater.state_out() is False and current_temp < _target_temperature_lower:
             logger.info("Temperature below threshold. Powering heater on.")
