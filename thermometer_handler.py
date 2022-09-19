@@ -2,6 +2,7 @@ import math
 
 import board
 import adafruit_dht
+import time
 
 def c_to_f(temp):
     return temp * 1.8 + 32
@@ -11,26 +12,33 @@ def c_to_k(temp):
 
 
 class ThermometerHandler:
-    _dht_device1 = None
+    _sensor_pin = None
+    _sensor = None
 
     on_log_message = None
 
-    def __init__(self, sensor_id):
-        self._sensor_id = sensor_id
-        self._sensor = W1ThermSensor(W1ThermSensor.THERM_SENSOR_DS18B20, self._sensor_id)
+    def __init__(self, sensor_pin):
+        self._sensor_pin = sensor_pin
+        self._sensor = adafruit_dht.DHT22(self._sensor_pin)
+
+    def get_humidity(self):
+        # try... handle errors TBC
+        return self._sensor.humidity
 
     def get_temperature(self, unit='f'):
-        # temp_reading = None
-        counter = 0
+        temp_reading = None
         while True:
-            temp_reading = self._sensor.get_temperature(W1ThermSensor.DEGREES_C)
+            try:
+                temp_reading = self._sensor.temperature
+            except RuntimeError as error:
+                time.sleep(1.0)
+                continue
+            except Exception as error:
+                # Unknown error?
+                self._sensor.exit()
+                raise error
             if -6.01 <= temp_reading <= 45.01:
                 break
-            counter += 1
-            if self.on_log_message is not None:
-                self.on_log_message("ThermometerHandler: Bad temperature reading: " + str(temp_reading))
-            if counter > 30:
-                raise IOError("Temperature sensor not connected or not functioning correctly")
 
         # Got valid reading. Give the info back
         if unit.lower() == 'f':
